@@ -1,10 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\HealthController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/health', function () {
-    return response()->json([
-        'status' => 'ok',
-        'service' => 'comgatus-api',
-    ]);
-});
+Route::get('/health', HealthController::class);
