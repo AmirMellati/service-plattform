@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+//dart convert to json
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+//save token 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // Controllers for the login input fields.
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final storage = FlutterSecureStorage();
 
   // Sends the login data to the Laravel API.
 Future<void> loginUser() async {
@@ -30,12 +35,24 @@ Future<void> loginUser() async {
   if (!mounted) return;
 
   if (response.statusCode == 200) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Anmeldung erfolgreich!'),
-      ),
+  // Decode the JSON response and read the authentication token.
+    final data = jsonDecode(response.body);
+    final token = data['token'];
+        // Store the authentication token securely.
+    await storage.write(
+    key: 'auth_token',
+    value: token,
     );
-  } else if (response.statusCode == 401) {
+
+    
+
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+        content: Text('Anmeldung erfolgreich!'),
+        ),
+    );
+    }
+    else if (response.statusCode == 401) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('E-Mail oder Passwort ist falsch.'),
