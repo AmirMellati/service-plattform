@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+//dart convert to json
+import 'dart:convert';
+//http conection for flutter and laravel
+import 'package:http/http.dart' as http;
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -11,6 +15,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+// Function to register user
+// Sends the registration data to the Laravel 
+//API and receives the server response.
+  Future<void> registerUser() async {
+  final response = await http.post(
+    Uri.parse('http://127.0.0.1:8000/api/register'),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'name': nameController.text,
+      'email': emailController.text,
+      'password': passwordController.text,
+    }),
+  );
+
+  print(response.statusCode);
+  print(response.body);
+}
 
   @override
   void dispose() {
