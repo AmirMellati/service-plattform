@@ -34,6 +34,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   print(response.statusCode);
   print(response.body);
+  if (!mounted) return;
+// Show a SnackBar with the server response
+ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(
+    content: Text(
+      'Status: ${response.statusCode}\n${response.body}',
+    ),
+  ),
+);
 }
 
   @override
@@ -77,13 +86,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            //conect to the register function
             ElevatedButton(
-              onPressed: () {
-                print(nameController.text);
-                print(emailController.text);
-                print(passwordController.text);
-              },
-              child: const Text('Registrieren'),
+            onPressed: registerUser,
+            child: const Text('Registrieren'),
             ),
           ],
         ),
