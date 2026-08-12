@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'register_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -37,11 +38,19 @@ class WelcomeScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 12),
-
+            //navi to register screen
             OutlinedButton(
-              onPressed: () {},
-              child: const Text('Registrieren'),
-            ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RegisterScreen(),
+                    ),
+                  );
+                },
+                child: const Text('Registrieren'),
+              ),
+
           ],
         ),
       ),
