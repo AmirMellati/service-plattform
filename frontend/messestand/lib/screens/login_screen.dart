@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,6 +13,42 @@ class _LoginScreenState extends State<LoginScreen> {
   // Controllers for the login input fields.
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+  // Sends the login data to the Laravel API.
+Future<void> loginUser() async {
+  final response = await http.post(
+    Uri.parse('http://127.0.0.1:8000/api/login'),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'email': emailController.text,
+      'password': passwordController.text,
+    }),
+  );
+
+  if (!mounted) return;
+
+  if (response.statusCode == 200) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Anmeldung erfolgreich!'),
+      ),
+    );
+  } else if (response.statusCode == 401) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('E-Mail oder Passwort ist falsch.'),
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ein Fehler ist aufgetreten.'),
+      ),
+    );
+  }
+}
 
   @override
   void dispose() {
@@ -47,12 +85,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () {
-                // Temporary test before connecting the login API.
-                print(emailController.text);
-                print(passwordController.text);
-              },
-              child: const Text('Anmelden'),
+            // Calls the login API when the button is pressed.
+            onPressed: loginUser,
+            child: const Text('Anmelden'),
             ),
           ],
         ),
