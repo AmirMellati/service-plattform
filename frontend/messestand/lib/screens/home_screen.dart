@@ -29,6 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
+      // Check if the screen is still active before updating the state.
+      if (!mounted) return;
+
       setState(() {
         messestaende = data;
       });
@@ -44,7 +47,30 @@ class _HomeScreenState extends State<HomeScreen> {
         itemBuilder: (context, index) {
           final messestand = messestaende[index];
 
-          return ListTile(title: Text(messestand['titel']));
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    messestand['title'],
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(messestand['description'] ?? 'Keine Beschreibung'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Preis: ${messestand['price_from'] ?? '-'} € - ${messestand['price_to'] ?? '-'} €',
+                  ),
+                ],
+              ),
+            ),
+          );
         },
       ),
     );
