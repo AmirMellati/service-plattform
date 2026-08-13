@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'meins_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -138,6 +139,34 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        iconSize: 18,
+        selectedFontSize: 8,
+        unselectedFontSize: 11,
+        // Navigates to the MeinsScreen when the third item is tapped.
+        onTap: (index) {
+          if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MeinsScreen()),
+            );
+          }
+        },
+
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.message),
+            label: 'Nachrichten',
+          ),
+
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'meins'),
+
+          //home item
         ],
       ),
     );
