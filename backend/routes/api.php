@@ -11,3 +11,11 @@ Route::post('/register', [AuthController::class, 'register']);
 // Handles user login requests.
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/messestaende', [MessestandController::class, 'index']);
+
+
+/* Protects the route with Sanctum and returns only
+ the authenticated user's messestaende.*/
+Route::middleware('auth:sanctum')->get(
+    '/me/messestaende',
+    [MessestandController::class, 'mine']
+);
