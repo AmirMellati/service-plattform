@@ -26,14 +26,50 @@ class MessestandController extends Controller
         return response()->json($messestaende);
     }
 
-// Returns the messestaende that belong to the authenticated user.
-public function mine(Request $request): JsonResponse
-{
-    $messestaende = Messestand::with(['user', 'skills'])
-        ->where('user_id', $request->user()->id)
-        ->get();
+    // Returns the messestaende that belong to the authenticated user.
+    public function mine(Request $request): JsonResponse
+    {
+        $messestaende = Messestand::with(['user', 'skills'])
+            ->where('user_id', $request->user()->id)
+            ->get();
 
-    return response()->json($messestaende);
-}
+        return response()->json($messestaende);
+    }
+
+    // Creates a new messestand for the authenticated user.
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'price_from' => ['nullable', 'numeric', 'min:0'],
+            'price_to' => ['nullable', 'numeric', 'min:0'],
+            'skill_ids' => ['required', 'array', 'min:1'],
+            'skill_ids.*' => ['integer', 'exists:skills,id'],
+        ]);
+
+
+
+        // Creates the messestand and assigns it to the authenticated user.
+        $messestand = Messestand::create([
+            'user_id' => $request->user()->id,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'price_from' => $validated['price_from'] ?? null,
+            'price_to' => $validated['price_to'] ?? null,
+            'featured' => false,
+
+        ]);
+
+
+        // Connects the selected skills to the new messestand.
+        $messestand->skills()->sync($validated['skill_ids']);
+
+        // Returns the newly created messestand with its user and skills.
+        return response()->json(
+            $messestand->load(['user', 'skills']),
+            201
+        );
+    }
 
 }

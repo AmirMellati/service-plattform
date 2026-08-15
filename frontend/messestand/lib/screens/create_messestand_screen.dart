@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class CreateMessestandScreen extends StatefulWidget {
@@ -16,11 +17,25 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
   final descriptionController = TextEditingController();
   final priceFromController = TextEditingController();
   final priceToController = TextEditingController();
+
+  // Secure storage for reading the authentication token.
+  final storage = FlutterSecureStorage();
+
   // Stores all available skills from the API.
   List<dynamic> skills = [];
 
   // Stores the selected skill IDs.
   List<int> selectedSkillIds = [];
+
+  // Stores the current skill search text.
+  String skillSearch = '';
+
+  // Loads the available skills when the screen opens.
+  @override
+  void initState() {
+    super.initState();
+    getSkills();
+  }
 
   // Loads all available skills from the API.
   Future<void> getSkills() async {
@@ -32,21 +47,52 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
       final data = jsonDecode(response.body);
 
       if (!mounted) return;
-      // Updates the state with the loaded skills.
+
       setState(() {
         skills = data;
       });
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    getSkills();
+  // Sends the new messestand data to the API.
+  Future<void> createMessestand() async {
+    final token = await storage.read(key: 'auth_token');
+
+    final response = await http.post(
+      Uri.parse('http://127.0.0.1:8000/api/messestaende'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+
+      body: jsonEncode({
+        'title': titleController.text,
+        'description': descriptionController.text,
+        'price_from': priceFromController.text,
+        'price_to': priceToController.text,
+        'skill_ids': selectedSkillIds,
+      }),
+    );
+    print('Status: ${response.statusCode}');
+    print('Response: ${response.body}');
+
+    if (response.statusCode == 201) {
+      if (!mounted) return;
+
+      Navigator.pop(context, true);
+    }
   }
 
-  // Stores the current skill search text.
-  String skillSearch = '';
+  @override
+  void dispose() {
+    // Releases the form controllers when the screen is closed.
+    titleController.dispose();
+    descriptionController.dispose();
+    priceFromController.dispose();
+    priceToController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,36 +172,37 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
 
             const SizedBox(height: 12),
 
-            // Displays all skills and allows multiple selections.
-            ...skills
-                .where((skill) {
-                  final name = skill['name'].toString().toLowerCase();
-                  return name.contains(skillSearch.toLowerCase());
-                })
-                .map((skill) {
-                  final skillId = skill['id'] as int;
+            // Shows skills only when the user enters a search term.
+            if (skillSearch.trim().isNotEmpty)
+              ...skills
+                  .where((skill) {
+                    final name = skill['name'].toString().toLowerCase();
 
-                  return CheckboxListTile(
-                    title: Text(skill['name']),
-                    value: selectedSkillIds.contains(skillId),
-                    onChanged: (selected) {
-                      setState(() {
-                        if (selected == true) {
-                          selectedSkillIds.add(skillId);
-                        } else {
-                          selectedSkillIds.remove(skillId);
-                        }
-                      });
-                    },
-                  );
-                }),
+                    return name.contains(skillSearch.toLowerCase().trim());
+                  })
+                  .map((skill) {
+                    final skillId = skill['id'] as int;
+
+                    return CheckboxListTile(
+                      title: Text(skill['name']),
+                      value: selectedSkillIds.contains(skillId),
+                      onChanged: (selected) {
+                        setState(() {
+                          if (selected == true) {
+                            selectedSkillIds.add(skillId);
+                          } else {
+                            selectedSkillIds.remove(skillId);
+                          }
+                        });
+                      },
+                    );
+                  }),
 
             const SizedBox(height: 20),
 
             ElevatedButton(
-              onPressed: () {
-                // The API request will be added next.
-              },
+              // Creates the messestand with the entered data.
+              onPressed: createMessestand,
               child: const Text('Messestand erstellen'),
             ),
           ],

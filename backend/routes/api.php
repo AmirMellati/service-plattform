@@ -22,7 +22,14 @@ Route::middleware('auth:sanctum')->get(
     [MessestandController::class, 'mine']
 );
 
+// Creates a new messestand for the authenticated user.
+Route::middleware('auth:sanctum')->post(
+    '/messestaende',
+    [MessestandController::class, 'store']
+);
+
 // Returns all available skills for messestand selection.
 Route::get('/skills', function () {
     return Skill::orderBy('name')->get();
 });
+
