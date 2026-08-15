@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Messestand;
 use Illuminate\Http\JsonResponse;
 
+
 class MessestandController extends Controller
 {
     public function index(Request $request): JsonResponse
@@ -44,6 +45,12 @@ class MessestandController extends Controller
             'description' => ['nullable', 'string'],
             'price_from' => ['nullable', 'numeric', 'min:0'],
             'price_to' => ['nullable', 'numeric', 'min:0'],
+
+            'street' => ['required', 'string', 'max:255'],
+            'house_number' => ['required', 'string', 'max:20'],
+            'postal_code' => ['required', 'string', 'max:20'],
+            'city' => ['required', 'string', 'max:255'],
+
             'skill_ids' => ['required', 'array', 'min:1'],
             'skill_ids.*' => ['integer', 'exists:skills,id'],
         ]);
@@ -59,6 +66,17 @@ class MessestandController extends Controller
             'price_to' => $validated['price_to'] ?? null,
             'featured' => false,
 
+
+
+
+        ]);
+
+        // Creates the address for the new messestand.
+        $messestand->einsatzgebiet()->create([
+            'street' => $validated['street'],
+            'house_number' => $validated['house_number'],
+            'postal_code' => $validated['postal_code'],
+            'city' => $validated['city'],
         ]);
 
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\MessestandController;
 use App\Models\Skill;
 
 
+
 Route::get('/health', HealthController::class);
 Route::post('/register', [AuthController::class, 'register']);
 // Handles user login requests.

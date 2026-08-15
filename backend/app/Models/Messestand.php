@@ -35,4 +35,18 @@ class Messestand extends Model
         );
     }
 
+
+
+
+
+
+
+
+    // Each einsatzgebiet belongs to one messestand.
+    // Each messestand has one einsatzgebiet.
+    public function einsatzgebiet()
+    {
+        return $this->hasOne(Einsatzgebiet::class);
+    }
+
 }

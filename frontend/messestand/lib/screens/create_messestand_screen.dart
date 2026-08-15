@@ -21,6 +21,12 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
   // Secure storage for reading the authentication token.
   final storage = FlutterSecureStorage();
 
+  // Controllers for the messestand address.
+  final streetController = TextEditingController();
+  final houseNumberController = TextEditingController();
+  final postalCodeController = TextEditingController();
+  final cityController = TextEditingController();
+
   // Stores all available skills from the API.
   List<dynamic> skills = [];
 
@@ -42,6 +48,8 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
     final response = await http.get(
       Uri.parse('http://127.0.0.1:8000/api/skills'),
     );
+    print('Status: ${response.statusCode}');
+    print('Response: ${response.body}');
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -72,6 +80,10 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
         'price_from': priceFromController.text,
         'price_to': priceToController.text,
         'skill_ids': selectedSkillIds,
+        'street': streetController.text,
+        'house_number': houseNumberController.text,
+        'postal_code': postalCodeController.text,
+        'city': cityController.text,
       }),
     );
     print('Status: ${response.statusCode}');
@@ -92,6 +104,11 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
     priceFromController.dispose();
     priceToController.dispose();
     super.dispose();
+
+    streetController.dispose();
+    houseNumberController.dispose();
+    postalCodeController.dispose();
+    cityController.dispose();
   }
 
   @override
@@ -148,6 +165,63 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
             ),
 
             const SizedBox(height: 20),
+
+            const Text(
+              'Adresse',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 20),
+
+            const Text(
+              'Einsatzgebiet',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Street
+            TextField(
+              controller: streetController,
+              decoration: const InputDecoration(
+                labelText: 'Straße',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // House number
+            TextField(
+              controller: houseNumberController,
+              decoration: const InputDecoration(
+                labelText: 'Hausnummer',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Postal code
+            TextField(
+              controller: postalCodeController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'PLZ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // City
+            TextField(
+              controller: cityController,
+              decoration: const InputDecoration(
+                labelText: 'Stadt',
+                border: OutlineInputBorder(),
+              ),
+            ),
 
             const Text(
               'Skills',
