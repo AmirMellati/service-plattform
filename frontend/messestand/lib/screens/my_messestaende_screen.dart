@@ -54,13 +54,19 @@ class _MyMessestaendeScreenState extends State<MyMessestaendeScreen> {
       // Button for creating a new messestand.
       floatingActionButton: FloatingActionButton(
         // Opens the screen for creating a new messestand.
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          // Opens the create screen and waits for the result.
+          final created = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const CreateMessestandScreen(),
             ),
           );
+
+          // Reloads the list when a new messestand was created.
+          if (created == true) {
+            getMyMessestaende();
+          }
         },
         child: const Icon(Icons.add),
       ),
