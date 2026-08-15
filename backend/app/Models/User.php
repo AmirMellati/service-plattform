@@ -30,4 +30,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    // Returns the profile that belongs to this user.
+    public function profile()
+    {
+        return $this->hasOne(Profile::class);
+    }
 }

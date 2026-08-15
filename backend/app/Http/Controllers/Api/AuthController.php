@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Profile;
 
 class AuthController extends Controller
 {
@@ -16,15 +17,31 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
+
+            // Validates the user's required private address.
+            'street' => ['required', 'string', 'max:255'],
+            'house_number' => ['required', 'string', 'max:20'],
+            'postal_code' => ['required', 'string', 'max:20'],
+            'city' => ['required', 'string', 'max:255'],
         ]);
 
-        
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
             'role' => 'USER',
             'status' => 'AKTIV',
+
+        ]);
+
+        // Creates a profile with the user's private address.
+        Profile::create([
+            'user_id' => $user->id,
+            'street' => $validated['street'],
+            'house_number' => $validated['house_number'],
+            'postal_code' => $validated['postal_code'],
+            'city' => $validated['city'],
         ]);
 
         return response()->json([
@@ -61,5 +78,5 @@ class AuthController extends Controller
             'user' => $user,
             'token' => $token,
         ], 200);
-}
+    }
 }
