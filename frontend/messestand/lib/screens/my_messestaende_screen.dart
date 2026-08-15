@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'create_messestand_screen.dart';
 
 class MyMessestaendeScreen extends StatefulWidget {
   const MyMessestaendeScreen({super.key});
@@ -17,7 +18,6 @@ class _MyMessestaendeScreenState extends State<MyMessestaendeScreen> {
 
   // Stores the authenticated user's messestaende.
   List<dynamic> messestaende = [];
-
 
   // Loads the user's messestaende when the screen opens.
   @override
@@ -53,32 +53,35 @@ class _MyMessestaendeScreenState extends State<MyMessestaendeScreen> {
 
       // Button for creating a new messestand.
       floatingActionButton: FloatingActionButton(
+        // Opens the screen for creating a new messestand.
         onPressed: () {
-          // The create screen will be added later.
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateMessestandScreen(),
+            ),
+          );
         },
         child: const Icon(Icons.add),
       ),
 
-
       // Displays the user's messestaende or a message if there are none.
       body: messestaende.isEmpty
-    ? const Center(
-        child: Text('Noch keine Messestände'),
-      )
-    : ListView.builder(
-        itemCount: messestaende.length,
-        itemBuilder: (context, index) {
-          final messestand = messestaende[index];
+          ? const Center(child: Text('Noch keine Messestände'))
+          : ListView.builder(
+              itemCount: messestaende.length,
+              itemBuilder: (context, index) {
+                final messestand = messestaende[index];
 
-          return ListTile(
-            leading: const Icon(Icons.store),
-            title: Text(messestand['title']),
-            subtitle: Text(
-              messestand['description'] ?? 'Keine Beschreibung',
+                return ListTile(
+                  leading: const Icon(Icons.store),
+                  title: Text(messestand['title']),
+                  subtitle: Text(
+                    messestand['description'] ?? 'Keine Beschreibung',
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 }
