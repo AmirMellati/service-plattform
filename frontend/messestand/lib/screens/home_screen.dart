@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+
 import 'meins_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -12,28 +13,61 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Define a list to hold the messestaende from the API.
+  // Stores all messestaende returned by the API.
   List<dynamic> messestaende = [];
+
+  // Stores the current search text for skills.
+  String skillSearch = '';
+
+  // Stores the current search text for the service area.
+  String districtSearch = '';
 
   @override
   void initState() {
     super.initState();
+
+    // Loads all messestaende when the screen opens.
     getMessestaende();
   }
 
-  // Fetches messestaende from the API, optionally filtered by skill.
-  Future<void> getMessestaende({String skill = ''}) async {
+  // Loads messestaende from the Laravel API.
+  // The request can optionally be filtered by skill and district.
+  Future<void> getMessestaende({
+    String skill = '',
+    String district = '',
+  }) async {
+    // Stores only the filters that actually contain a value.
+    final queryParameters = <String, String>{};
+
+    // Adds the skill filter to the URL when a skill was entered.
+    if (skill.trim().isNotEmpty) {
+      queryParameters['skill'] = skill.trim();
+    }
+
+    // Adds the district filter to the URL when a service area was entered.
+    if (district.trim().isNotEmpty) {
+      queryParameters['district'] = district.trim();
+    }
+
+    // Creates the final API URL with optional query parameters.
     final uri = Uri.parse(
       'http://127.0.0.1:8000/api/messestaende',
-    ).replace(queryParameters: skill.isNotEmpty ? {'skill': skill} : null);
+    ).replace(
+      queryParameters: queryParameters.isEmpty ? null : queryParameters,
+    );
 
+    // Sends the GET request to Laravel.
     final response = await http.get(uri);
 
+    // Continues only when the API request was successful.
     if (response.statusCode == 200) {
+      // Converts the JSON response into a Dart object.
       final data = jsonDecode(response.body);
 
+      // Prevents updating the state if the screen is no longer active.
       if (!mounted) return;
 
+      // Updates the visible messestand list.
       setState(() {
         messestaende = data;
       });
@@ -44,24 +78,57 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       // Displays the title of the home screen.
-      appBar: AppBar(title: const Text('Messestand')),
+      appBar: AppBar(
+        title: const Text('Messestand'),
+      ),
 
       body: Column(
         children: [
-          // Search field for filtering messestaende by skill.
+          // Contains both search fields.
           Padding(
             padding: const EdgeInsets.all(16),
-            child: TextField(
-              decoration: const InputDecoration(
-                labelText: 'Nach Skill suchen',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
-              ),
+            child: Column(
+              children: [
+                // Search field for filtering messestaende by skill.
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Nach Skill suchen',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                  ),
 
-              // Sends the entered skill to the API.
-              onChanged: (value) {
-                getMessestaende(skill: value);
-              },
+                  // Stores the entered skill and reloads the messestaende.
+                  onChanged: (value) {
+                    skillSearch = value;
+
+                    getMessestaende(
+                      skill: skillSearch,
+                      district: districtSearch,
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                // Search field for filtering messestaende by service area.
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Nach Einsatzgebiet suchen',
+                    prefixIcon: Icon(Icons.location_on_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+
+                  // Stores the entered district and reloads the messestaende.
+                  onChanged: (value) {
+                    districtSearch = value;
+
+                    getMessestaende(
+                      skill: skillSearch,
+                      district: districtSearch,
+                    );
+                  },
+                ),
+              ],
             ),
           ),
 
@@ -94,6 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
 
+                        const SizedBox(height: 8),
+
                         // Displays all skills of the messestand.
                         Wrap(
                           spacing: 8,
@@ -101,7 +170,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           children:
                               ((messestand['skills'] ?? []) as List<dynamic>)
                                   .map<Widget>((skill) {
-                                    return Chip(label: Text(skill['name']));
+                                    return Chip(
+                                      label: Text(skill['name']),
+                                    );
                                   })
                                   .toList(),
                         ),
@@ -111,22 +182,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Displays the name of the handwerker.
                         Text(
                           'Handwerker: ${messestand['user']['name']}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-
-                        // Displays a star if the messestand is featured.
-                        if (messestand['featured'] == 1)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 4),
-                            child: Icon(Icons.star, size: 24),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
                           ),
-
-                        const SizedBox(height: 8),
-
-                        // Displays the messestand description.
-                        Text(messestand['description'] ?? 'Keine Beschreibung'),
-
-                        const SizedBox(height: 8),
+                        ),
 
                         const SizedBox(height: 6),
 
@@ -134,7 +193,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (messestand['einsatzgebiet'] != null)
                           Row(
                             children: [
-                              const Icon(Icons.location_on_outlined, size: 18),
+                              const Icon(
+                                Icons.location_on_outlined,
+                                size: 18,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 '${messestand['einsatzgebiet']['city']} - '
@@ -143,9 +205,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
 
+                        // Displays a star if the messestand is featured.
+                        if (messestand['featured'] == 1)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 6),
+                            child: Icon(
+                              Icons.star,
+                              size: 24,
+                            ),
+                          ),
+
+                        const SizedBox(height: 8),
+
+                        // Displays the messestand description.
+                        Text(
+                          messestand['description'] ??
+                              'Keine Beschreibung',
+                        ),
+
+                        const SizedBox(height: 8),
+
                         // Displays the price range.
                         Text(
-                          'Preis: ${messestand['price_from'] ?? '-'} € - ${messestand['price_to'] ?? '-'} €',
+                          'Preis: '
+                          '${messestand['price_from'] ?? '-'} € - '
+                          '${messestand['price_to'] ?? '-'} €',
                         ),
                       ],
                     ),
@@ -156,17 +240,23 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+
+      // Displays the main navigation of the application.
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         iconSize: 18,
         selectedFontSize: 8,
         unselectedFontSize: 11,
-        // Navigates to the MeinsScreen when the third item is tapped.
+
+        // Navigates to the selected section.
         onTap: (index) {
+          // Opens the personal user area.
           if (index == 2) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const MeinsScreen()),
+              MaterialPageRoute(
+                builder: (context) => const MeinsScreen(),
+              ),
             );
           }
         },
@@ -176,12 +266,14 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.message),
             label: 'Nachrichten',
           ),
-
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'meins'),
-
-          //home item
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Meins',
+          ),
         ],
       ),
     );

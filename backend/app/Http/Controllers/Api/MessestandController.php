@@ -16,9 +16,18 @@ class MessestandController extends Controller
         // search for messestaende by skill if the 'skill' query parameter is provided
         if ($request->filled('skill')) {
             $skill = $request->query('skill');
-
+            // Filters messestaende by skill name using a "like" query.
             $query->whereHas('skills', function ($q) use ($skill) {
                 $q->where('name', 'like', '%' . $skill . '%');
+            });
+        }
+
+        // Filters messestaende by service area.
+        if ($request->filled('district')) {
+            $district = $request->query('district');
+
+            $query->whereHas('einsatzgebiet', function ($q) use ($district) {
+                $q->where('district', 'like', '%' . $district . '%');
             });
         }
 
