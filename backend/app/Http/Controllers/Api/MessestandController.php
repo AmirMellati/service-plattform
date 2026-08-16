@@ -12,7 +12,7 @@ class MessestandController extends Controller
     public function index(Request $request): JsonResponse
     {
         // Start building the query to fetch Messestaende with their associated user and skills.
-        $query = Messestand::with(['user', 'skills']);
+        $query = Messestand::with(['user', 'skills', 'einsatzgebiet']);
         // search for messestaende by skill if the 'skill' query parameter is provided
         if ($request->filled('skill')) {
             $skill = $request->query('skill');
@@ -30,7 +30,7 @@ class MessestandController extends Controller
     // Returns the messestaende that belong to the authenticated user.
     public function mine(Request $request): JsonResponse
     {
-        $messestaende = Messestand::with(['user', 'skills'])
+        $messestaende = Messestand::with(['user', 'skills', 'einsatzgebiet'])
             ->where('user_id', $request->user()->id)
             ->get();
 

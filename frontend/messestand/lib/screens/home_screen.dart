@@ -128,6 +128,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         const SizedBox(height: 8),
 
+                        const SizedBox(height: 6),
+
+                        // Displays the service area of the handwerker.
+                        if (messestand['einsatzgebiet'] != null)
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined, size: 18),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${messestand['einsatzgebiet']['city']} - '
+                                '${messestand['einsatzgebiet']['district']}',
+                              ),
+                            ],
+                          ),
+
                         // Displays the price range.
                         Text(
                           'Preis: ${messestand['price_from'] ?? '-'} € - ${messestand['price_to'] ?? '-'} €',
