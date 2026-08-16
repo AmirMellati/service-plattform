@@ -127,4 +127,22 @@ class MessestandController extends Controller
         );
     }
 
+    // Deletes a messestand owned by the authenticated user.
+    public function destroy(Request $request, Messestand $messestand): JsonResponse
+    {
+        // Checks whether the logged-in user owns this messestand.
+        if ($messestand->user_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Du darfst diesen Messestand nicht löschen.',
+            ], 403);
+        }
+
+        // Deletes the messestand.
+        $messestand->delete();
+
+        return response()->json([
+            'message' => 'Messestand wurde erfolgreich gelöscht.',
+        ]);
+    }
+
 }

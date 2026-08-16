@@ -34,3 +34,9 @@ Route::get('/skills', function () {
     return Skill::orderBy('name')->get();
 });
 
+// Deletes a messestand that belongs to the authenticated user.
+Route::delete(
+    '/messestaende/{messestand}',
+    [MessestandController::class, 'destroy']
+)->middleware('auth:sanctum');
+
