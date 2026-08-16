@@ -5,7 +5,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Messestand;
 use Illuminate\Http\JsonResponse;
-
+use App\Services\GeocodingService;
 
 class MessestandController extends Controller
 {
@@ -46,14 +46,34 @@ class MessestandController extends Controller
             'price_from' => ['nullable', 'numeric', 'min:0'],
             'price_to' => ['nullable', 'numeric', 'min:0'],
 
-            'street' => ['required', 'string', 'max:255'],
-            'house_number' => ['required', 'string', 'max:20'],
-            'postal_code' => ['required', 'string', 'max:20'],
             'city' => ['required', 'string', 'max:255'],
+            'district' => ['required', 'string', 'max:255'],
 
             'skill_ids' => ['required', 'array', 'min:1'],
             'skill_ids.*' => ['integer', 'exists:skills,id'],
+
+
+
+
         ]);
+
+        // Creates the geocoding service.
+        $geocodingService = app(GeocodingService::class);
+
+        // Checks whether the entered service area really exists.
+        $isValidServiceArea = $geocodingService->validateServiceArea(
+            $validated['city'],
+            $validated['district']
+        );
+
+        // Stops the request if the entered service area could not be validated.
+        if (!$isValidServiceArea) {
+            return response()->json([
+                'message' => 'Das angegebene Einsatzgebiet wurde nicht gefunden.',
+            ], 422);
+        }
+
+
 
 
 
@@ -71,12 +91,13 @@ class MessestandController extends Controller
 
         ]);
 
-        // Creates the address for the new messestand.
+
+        // Creates the service area for the new messestand.
+// This represents where the handwerker offers the service,
+// not the handwerker's private address.
         $messestand->einsatzgebiet()->create([
-            'street' => $validated['street'],
-            'house_number' => $validated['house_number'],
-            'postal_code' => $validated['postal_code'],
             'city' => $validated['city'],
+            'district' => $validated['district'],
         ]);
 
 

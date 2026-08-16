@@ -9,20 +9,12 @@ class Einsatzgebiet extends Model
     // The database table used by this model.
     protected $table = 'einsatzgebiete';
 
+    
     // Fields that can be mass assigned.
     protected $fillable = [
         'messestand_id',
-        'street',
-        'house_number',
-        'postal_code',
         'city',
-        'latitude',
-        'longitude',
-
-
-
-
-
+        'district',
     ];
 
     // Each einsatzgebiet belongs to one messestand.
