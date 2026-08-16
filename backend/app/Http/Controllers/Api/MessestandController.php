@@ -31,6 +31,13 @@ class MessestandController extends Controller
             });
         }
 
+        // Filters messestaende by maximum starting price.
+        if ($request->filled('max_price')) {
+            $maxPrice = $request->query('max_price');
+
+            $query->where('price_from', '<=', $maxPrice);
+        }
+
         $messestaende = $query->get();
 
         return response()->json($messestaende);

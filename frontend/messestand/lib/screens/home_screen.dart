@@ -22,6 +22,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // Stores the current search text for the service area.
   String districtSearch = '';
 
+  // Stores the current maximum price filter.
+  String maxPriceSearch = '';
+
   @override
   void initState() {
     super.initState();
@@ -31,22 +34,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Loads messestaende from the Laravel API.
-  // The request can optionally be filtered by skill and district.
+  // The request can optionally be filtered by skill, district and max price.
   Future<void> getMessestaende({
     String skill = '',
     String district = '',
+    String maxPrice = '',
   }) async {
     // Stores only the filters that actually contain a value.
     final queryParameters = <String, String>{};
 
-    // Adds the skill filter to the URL when a skill was entered.
+    // Adds the skill filter when a skill was entered.
     if (skill.trim().isNotEmpty) {
       queryParameters['skill'] = skill.trim();
     }
 
-    // Adds the district filter to the URL when a service area was entered.
+    // Adds the district filter when a service area was entered.
     if (district.trim().isNotEmpty) {
       queryParameters['district'] = district.trim();
+    }
+
+    // Adds the maximum price filter when a value was entered.
+    if (maxPrice.trim().isNotEmpty) {
+      queryParameters['max_price'] = maxPrice.trim();
     }
 
     // Creates the final API URL with optional query parameters.
@@ -84,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       body: Column(
         children: [
-          // Contains both search fields.
+          // Contains all search filters.
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -97,13 +106,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     border: OutlineInputBorder(),
                   ),
 
-                  // Stores the entered skill and reloads the messestaende.
+                  // Stores the entered skill and reloads the list.
                   onChanged: (value) {
                     skillSearch = value;
 
                     getMessestaende(
                       skill: skillSearch,
                       district: districtSearch,
+                      maxPrice: maxPriceSearch,
                     );
                   },
                 ),
@@ -118,13 +128,37 @@ class _HomeScreenState extends State<HomeScreen> {
                     border: OutlineInputBorder(),
                   ),
 
-                  // Stores the entered district and reloads the messestaende.
+                  // Stores the entered district and reloads the list.
                   onChanged: (value) {
                     districtSearch = value;
 
                     getMessestaende(
                       skill: skillSearch,
                       district: districtSearch,
+                      maxPrice: maxPriceSearch,
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 12),
+
+                // Search field for filtering messestaende by maximum price.
+                TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Max. Preis (€)',
+                    prefixIcon: Icon(Icons.euro),
+                    border: OutlineInputBorder(),
+                  ),
+
+                  // Stores the entered maximum price and reloads the list.
+                  onChanged: (value) {
+                    maxPriceSearch = value;
+
+                    getMessestaende(
+                      skill: skillSearch,
+                      district: districtSearch,
+                      maxPrice: maxPriceSearch,
                     );
                   },
                 ),
