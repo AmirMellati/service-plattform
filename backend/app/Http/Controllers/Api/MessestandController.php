@@ -145,4 +145,79 @@ class MessestandController extends Controller
         ]);
     }
 
+
+
+    
+    // Updates a messestand owned by the authenticated user.
+    public function update(
+        Request $request,
+        Messestand $messestand
+    ): JsonResponse {
+
+        // Checks whether the logged-in user owns this messestand.
+        if ($messestand->user_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Du darfst diesen Messestand nicht bearbeiten.',
+            ], 403);
+        }
+
+        // Validates the updated messestand data.
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+
+            'price_from' => ['nullable', 'numeric', 'min:0'],
+            'price_to' => ['nullable', 'numeric', 'min:0'],
+
+            'city' => ['required', 'string', 'max:255'],
+            'district' => ['required', 'string', 'max:255'],
+
+            'skill_ids' => ['required', 'array', 'min:1'],
+            'skill_ids.*' => ['integer', 'exists:skills,id'],
+        ]);
+
+        // Creates the geocoding service.
+        $geocodingService = app(GeocodingService::class);
+
+        // Checks  the updated service area really exists.
+        $isValidServiceArea = $geocodingService->validateServiceArea(
+            $validated['city'],
+            $validated['district']
+        );
+
+        // Stops the update if the service area is invalid.
+        if (!$isValidServiceArea) {
+            return response()->json([
+                'message' => 'Das angegebene Einsatzgebiet wurde nicht gefunden.',
+            ], 422);
+        }
+
+        // Updates the basic messestand information.
+        $messestand->update([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'price_from' => $validated['price_from'] ?? null,
+            'price_to' => $validated['price_to'] ?? null,
+        ]);
+
+        // Updates the service area of the messestand.
+        $messestand->einsatzgebiet()->update([
+            'city' => $validated['city'],
+            'district' => $validated['district'],
+        ]);
+
+        // Updates the skills connected to the messestand.
+        $messestand->skills()->sync(
+            $validated['skill_ids']
+        );
+
+        // Returns the updated messestand with all related data.
+        return response()->json(
+            $messestand->load([
+                'user',
+                'skills',
+                'einsatzgebiet',
+            ])
+        );
+    }
 }

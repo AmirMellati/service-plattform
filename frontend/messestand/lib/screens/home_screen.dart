@@ -59,9 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Creates the final API URL with optional query parameters.
-    final uri = Uri.parse(
-      'http://127.0.0.1:8000/api/messestaende',
-    ).replace(
+    final uri = Uri.parse('http://127.0.0.1:8000/api/messestaende').replace(
       queryParameters: queryParameters.isEmpty ? null : queryParameters,
     );
 
@@ -87,9 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       // Displays the title of the home screen.
-      appBar: AppBar(
-        title: const Text('Messestand'),
-      ),
+      appBar: AppBar(title: const Text('Messestand')),
 
       body: Column(
         children: [
@@ -204,9 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children:
                               ((messestand['skills'] ?? []) as List<dynamic>)
                                   .map<Widget>((skill) {
-                                    return Chip(
-                                      label: Text(skill['name']),
-                                    );
+                                    return Chip(label: Text(skill['name']));
                                   })
                                   .toList(),
                         ),
@@ -216,9 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Displays the name of the handwerker.
                         Text(
                           'Handwerker: ${messestand['user']['name']}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
 
                         const SizedBox(height: 6),
@@ -227,10 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (messestand['einsatzgebiet'] != null)
                           Row(
                             children: [
-                              const Icon(
-                                Icons.location_on_outlined,
-                                size: 18,
-                              ),
+                              const Icon(Icons.location_on_outlined, size: 18),
                               const SizedBox(width: 4),
                               Text(
                                 '${messestand['einsatzgebiet']['city']} - '
@@ -243,19 +232,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (messestand['featured'] == 1)
                           const Padding(
                             padding: EdgeInsets.only(top: 6),
-                            child: Icon(
-                              Icons.star,
-                              size: 24,
-                            ),
+                            child: Icon(Icons.star, size: 24),
                           ),
 
                         const SizedBox(height: 8),
 
                         // Displays the messestand description.
-                        Text(
-                          messestand['description'] ??
-                              'Keine Beschreibung',
-                        ),
+                        Text(messestand['description'] ?? 'Keine Beschreibung'),
 
                         const SizedBox(height: 8),
 
@@ -288,11 +271,15 @@ class _HomeScreenState extends State<HomeScreen> {
           if (index == 2) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const MeinsScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const MeinsScreen()),
             );
           }
+          // Reloads the messestaende after returning from the personal area.
+          getMessestaende(
+            skill: skillSearch,
+            district: districtSearch,
+            maxPrice: maxPriceSearch,
+          );
         },
 
         items: const [
@@ -300,14 +287,8 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.message),
             label: 'Nachrichten',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Meins',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Meins'),
         ],
       ),
     );

@@ -40,3 +40,9 @@ Route::delete(
     [MessestandController::class, 'destroy']
 )->middleware('auth:sanctum');
 
+
+// Updates a messestand that belongs to the authenticated user.
+Route::put(
+    '/messestaende/{messestand}',
+    [MessestandController::class, 'update']
+)->middleware('auth:sanctum');
