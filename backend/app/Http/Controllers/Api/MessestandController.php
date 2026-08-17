@@ -38,6 +38,22 @@ class MessestandController extends Controller
             $query->where('price_from', '<=', $maxPrice);
         }
 
+        // Shows active featured messestaende first.
+        $query->orderByRaw(
+            'CASE
+        WHEN featured = 1
+        AND featured_until IS NOT NULL
+        AND featured_until > NOW()
+        THEN 0
+        ELSE 1
+    END'
+        );
+
+        // Newer messestaende are shown first within each group.
+        $query->orderByDesc('created_at');
+
+        $messestaende = $query->get();
+
         $messestaende = $query->get();
 
         return response()->json($messestaende);
@@ -147,7 +163,7 @@ class MessestandController extends Controller
 
 
 
-    
+
     // Updates a messestand owned by the authenticated user.
     public function update(
         Request $request,
@@ -219,5 +235,33 @@ class MessestandController extends Controller
                 'einsatzgebiet',
             ])
         );
+    }
+
+
+
+    // Activates featured status for one month.
+    public function activateFeatured(
+        Request $request,
+        Messestand $messestand
+    ): JsonResponse {
+
+        // Checks whether the logged-in user owns this messestand.
+        if ($messestand->user_id !== $request->user()->id) {
+            return response()->json([
+                'message' => 'Du darfst diesen Messestand nicht als Featured aktivieren.',
+            ], 403);
+        }
+
+        // Activates featured status for one month.
+        $messestand->update([
+            'featured' => true,
+            'featured_until' => now()->addMonth(),
+        ]);
+
+        // Returns the updated messestand.
+        return response()->json([
+            'message' => 'Featured wurde für einen Monat aktiviert.',
+            'messestand' => $messestand,
+        ]);
     }
 }

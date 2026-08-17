@@ -46,3 +46,9 @@ Route::put(
     '/messestaende/{messestand}',
     [MessestandController::class, 'update']
 )->middleware('auth:sanctum');
+
+// Activates the featured status of a messestand that belongs to the authenticated user.
+Route::post(
+    '/messestaende/{messestand}/featured',
+    [MessestandController::class, 'activateFeatured']
+)->middleware('auth:sanctum');

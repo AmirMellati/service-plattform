@@ -18,6 +18,7 @@ class Messestand extends Model
         'price_from',
         'price_to',
         'featured',
+        'featured_until',
     ];
 
     public function user()
