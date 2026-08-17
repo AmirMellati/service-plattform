@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 class CreateMessestandScreen extends StatefulWidget {
   const CreateMessestandScreen({super.key});
@@ -13,15 +15,12 @@ class CreateMessestandScreen extends StatefulWidget {
 }
 
 class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
-  // API endpoint for messestaende.
   static const String messestaendeUrl =
       'http://127.0.0.1:8000/api/messestaende';
 
-  // API endpoint for skills.
   static const String skillsUrl =
       'http://127.0.0.1:8000/api/skills';
 
-  // Form controllers.
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
   final priceFromController = TextEditingController();
@@ -29,30 +28,24 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
   final cityController = TextEditingController();
   final districtController = TextEditingController();
 
-  // Secure storage for the authentication token.
   final storage = const FlutterSecureStorage();
+  final ImagePicker imagePicker = ImagePicker();
 
-  // Available skills loaded from the backend.
   List<dynamic> skills = [];
-
-  // IDs of the skills selected by the user.
   List<int> selectedSkillIds = [];
 
-  // Current text entered in the skill search field.
-  String skillSearch = '';
+  Uint8List? selectedImageBytes;
+  String? selectedImageName;
 
-  // Prevents multiple submissions while a request is running.
+  String skillSearch = '';
   bool isSaving = false;
 
   @override
   void initState() {
     super.initState();
-
-    // Loads all available skills when the screen opens.
     getSkills();
   }
 
-  // Loads all skills from the Laravel API.
   Future<void> getSkills() async {
     try {
       final response = await http.get(
@@ -62,8 +55,8 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
         },
       );
 
-      print('Skills status: ${response.statusCode}');
-      print('Skills response: ${response.body}');
+      debugPrint('Skills status: ${response.statusCode}');
+      debugPrint('Skills response: ${response.body}');
 
       if (response.statusCode != 200) {
         showMessage('Skills konnten nicht geladen werden.');
@@ -78,18 +71,149 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
         skills = data;
       });
     } catch (e) {
+      debugPrint('Get skills error: $e');
       showMessage('Keine Verbindung zum Server.');
     }
   }
 
-  // Creates a new messestand through the Laravel API.
+  Future<void> pickImage() async {
+    try {
+      final XFile? image = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1920,
+      );
+
+      if (image == null) return;
+
+      final bytes = await image.readAsBytes();
+
+      if (!mounted) return;
+
+      setState(() {
+        selectedImageBytes = bytes;
+        selectedImageName = image.name;
+      });
+    } catch (e) {
+      debugPrint('Pick image error: $e');
+      showMessage('Das Bild konnte nicht ausgewählt werden.');
+    }
+  }
+
+  void removeSelectedImage() {
+    setState(() {
+      selectedImageBytes = null;
+      selectedImageName = null;
+    });
+  }
+
+  double? parseOptionalPrice(String text) {
+    final normalized = text.trim().replaceAll(',', '.');
+
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return double.tryParse(normalized);
+  }
+
+  String getValidationMessage(Map<String, dynamic> data) {
+    final errors = data['errors'];
+
+    if (errors is Map) {
+      for (final error in errors.values) {
+        if (error is List && error.isNotEmpty) {
+          return error.first.toString();
+        }
+
+        if (error != null) {
+          return error.toString();
+        }
+      }
+    }
+
+    return data['message']?.toString() ??
+        'Die Eingaben sind ungültig.';
+  }
+
+  Future<void> uploadMessestandImage({
+    required int messestandId,
+    required String token,
+  }) async {
+    if (selectedImageBytes == null) return;
+
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$messestaendeUrl/$messestandId/bilder'),
+    );
+
+    request.headers.addAll({
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    });
+
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'bild',
+        selectedImageBytes!,
+        filename: selectedImageName ?? 'messestand.jpg',
+      ),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    debugPrint('Image upload status: ${response.statusCode}');
+    debugPrint('Image upload response: ${response.body}');
+
+    if (response.statusCode != 200 &&
+        response.statusCode != 201) {
+      throw Exception(
+        'Bild-Upload fehlgeschlagen: ${response.statusCode}',
+      );
+    }
+  }
+
   Future<void> createMessestand() async {
-    // Prevents sending the same request multiple times.
     if (isSaving) return;
 
-    // Simple frontend checks before sending data to Laravel.
     if (titleController.text.trim().isEmpty) {
       showMessage('Bitte einen Titel eingeben.');
+      return;
+    }
+
+    final priceFromText = priceFromController.text.trim();
+    final priceToText = priceToController.text.trim();
+
+    final priceFrom = parseOptionalPrice(priceFromText);
+    final priceTo = parseOptionalPrice(priceToText);
+
+    if (priceFromText.isNotEmpty && priceFrom == null) {
+      showMessage('Bitte einen gültigen Von-Preis eingeben.');
+      return;
+    }
+
+    if (priceToText.isNotEmpty && priceTo == null) {
+      showMessage('Bitte einen gültigen Bis-Preis eingeben.');
+      return;
+    }
+
+    if (priceFrom != null && priceFrom < 0) {
+      showMessage('Der Von-Preis darf nicht negativ sein.');
+      return;
+    }
+
+    if (priceTo != null && priceTo < 0) {
+      showMessage('Der Bis-Preis darf nicht negativ sein.');
+      return;
+    }
+
+    if (priceFrom != null &&
+        priceTo != null &&
+        priceFrom > priceTo) {
+      showMessage(
+        'Der Bis-Preis muss größer oder gleich dem Von-Preis sein.',
+      );
       return;
     }
 
@@ -113,15 +237,13 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
     });
 
     try {
-      // Reads the Sanctum authentication token.
       final token = await storage.read(key: 'auth_token');
 
-      if (token == null) {
+      if (token == null || token.isEmpty) {
         showMessage('Du bist nicht angemeldet.');
         return;
       }
 
-      // Sends the messestand data to Laravel.
       final response = await http.post(
         Uri.parse(messestaendeUrl),
         headers: {
@@ -131,54 +253,107 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
         },
         body: jsonEncode({
           'title': titleController.text.trim(),
-          'description': descriptionController.text.trim(),
-          'price_from': priceFromController.text.trim(),
-          'price_to': priceToController.text.trim(),
-
-          // Selected skills are sent as IDs.
+          'description':
+              descriptionController.text.trim().isEmpty
+                  ? null
+                  : descriptionController.text.trim(),
+          'price_from': priceFrom,
+          'price_to': priceTo,
           'skill_ids': selectedSkillIds,
-
-          // Service area of the handwerker.
-          // This is not the private address of the user.
           'city': cityController.text.trim(),
           'district': districtController.text.trim(),
         }),
       );
 
-      print('Create status: ${response.statusCode}');
-      print('Create response: ${response.body}');
+      debugPrint('Create status: ${response.statusCode}');
+      debugPrint('Create response: ${response.body}');
 
-      // Messestand was successfully created.
       if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+
+        final int? messestandId =
+            int.tryParse(data['id'].toString());
+
+        if (messestandId == null) {
+          showMessage(
+            'Messestand wurde erstellt, aber die ID fehlt.',
+          );
+          return;
+        }
+
+        if (selectedImageBytes != null) {
+          try {
+            await uploadMessestandImage(
+              messestandId: messestandId,
+              token: token,
+            );
+          } catch (e) {
+            debugPrint('Upload image error: $e');
+
+            if (!mounted) return;
+
+            await showDialog<void>(
+              context: context,
+              builder: (context) {
+                return AlertDialog(
+                  title: const Text('Bild-Upload fehlgeschlagen'),
+                  content: const Text(
+                    'Der Messestand wurde erstellt, '
+                    'aber das Bild konnte nicht hochgeladen werden.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+
+            if (!mounted) return;
+
+            Navigator.pop(context, true);
+            return;
+          }
+        }
+
         if (!mounted) return;
 
         Navigator.pop(context, true);
         return;
       }
 
-      // Laravel validation or invalid service area.
       if (response.statusCode == 422) {
         final data = jsonDecode(response.body);
 
-        showMessage(
-          data['message'] ?? 'Die Eingaben sind ungültig.',
-        );
+        if (data is Map<String, dynamic>) {
+          showMessage(getValidationMessage(data));
+        } else {
+          showMessage('Die Eingaben sind ungültig.');
+        }
 
         return;
       }
 
-      // Authentication error.
       if (response.statusCode == 401) {
         showMessage('Deine Anmeldung ist nicht mehr gültig.');
         return;
       }
 
-      // Unexpected backend error.
+      if (response.statusCode == 403) {
+        showMessage('Du hast keine Berechtigung für diese Aktion.');
+        return;
+      }
+
       showMessage(
-        'Serverfehler (${response.statusCode}). Bitte erneut versuchen.',
+        'Serverfehler (${response.statusCode}). '
+        'Bitte erneut versuchen.',
       );
     } catch (e) {
-      // Handles network errors or invalid server responses.
+      debugPrint('Create messestand error: $e');
       showMessage('Keine Verbindung zum Server.');
     } finally {
       if (mounted) {
@@ -189,42 +364,36 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
     }
   }
 
-  // Shows a message inside the application.
   void showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-        ),
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
   }
 
   @override
   void dispose() {
-    // Releases all TextEditingControllers.
     titleController.dispose();
     descriptionController.dispose();
     priceFromController.dispose();
     priceToController.dispose();
     cityController.dispose();
     districtController.dispose();
-
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Filters the skill list using the current search text.
     final filteredSkills = skillSearch.trim().isEmpty
         ? <dynamic>[]
         : skills.where((skill) {
-            final skillName =
+            final name =
                 skill['name'].toString().toLowerCase();
 
-            return skillName.contains(
+            return name.contains(
               skillSearch.trim().toLowerCase(),
             );
           }).toList();
@@ -237,18 +406,16 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            // Messestand title.
             TextField(
               controller: titleController,
+              textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: 'Titel',
                 border: OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 12),
 
-            // Messestand description.
             TextField(
               controller: descriptionController,
               maxLines: 4,
@@ -257,30 +424,93 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 12),
 
-            // Minimum price.
             TextField(
               controller: priceFromController,
-              keyboardType: TextInputType.number,
+              keyboardType:
+                  const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Preis von (€)',
                 border: OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 12),
 
-            // Maximum price.
             TextField(
               controller: priceToController,
-              keyboardType: TextInputType.number,
+              keyboardType:
+                  const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Preis bis (€)',
                 border: OutlineInputBorder(),
               ),
             ),
+
+            const SizedBox(height: 24),
+
+            const Text(
+              'Bild',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Container(
+              height: 190,
+              width: double.infinity,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.grey.shade400,
+                ),
+              ),
+              child: selectedImageBytes != null
+                  ? Image.memory(
+                      selectedImageBytes!,
+                      fit: BoxFit.cover,
+                    )
+                  : const Column(
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_outlined,
+                          size: 56,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 8),
+                        Text('Noch kein Bild ausgewählt'),
+                      ],
+                    ),
+            ),
+            const SizedBox(height: 12),
+
+            OutlinedButton.icon(
+              onPressed: isSaving ? null : pickImage,
+              icon: const Icon(Icons.photo_library_outlined),
+              label: Text(
+                selectedImageBytes == null
+                    ? 'Bild auswählen'
+                    : 'Anderes Bild auswählen',
+              ),
+            ),
+
+            if (selectedImageBytes != null)
+              TextButton.icon(
+                onPressed:
+                    isSaving ? null : removeSelectedImage,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Bild entfernen'),
+              ),
 
             const SizedBox(height: 24),
 
@@ -291,22 +521,19 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 12),
 
-            // City in which the service is offered.
             TextField(
               controller: cityController,
+              textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
                 labelText: 'Stadt',
                 hintText: 'z. B. Hamburg',
                 border: OutlineInputBorder(),
               ),
             ),
-
             const SizedBox(height: 12),
 
-            // District or local service area.
             TextField(
               controller: districtController,
               decoration: const InputDecoration(
@@ -325,10 +552,8 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 12),
 
-            // Searches through the available skills.
             TextField(
               decoration: const InputDecoration(
                 labelText: 'Skill suchen',
@@ -341,40 +566,42 @@ class _CreateMessestandScreenState extends State<CreateMessestandScreen> {
                 });
               },
             ),
-
             const SizedBox(height: 12),
 
-            // Shows the skills matching the search text.
             ...filteredSkills.map((skill) {
-              final skillId = skill['id'] as int;
+              final int skillId =
+                  int.parse(skill['id'].toString());
 
               return CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(skill['name'].toString()),
                 value: selectedSkillIds.contains(skillId),
-                onChanged: (selected) {
-                  setState(() {
-                    if (selected == true) {
-                      if (!selectedSkillIds.contains(skillId)) {
-                        selectedSkillIds.add(skillId);
-                      }
-                    } else {
-                      selectedSkillIds.remove(skillId);
-                    }
-                  });
-                },
+                onChanged: isSaving
+                    ? null
+                    : (selected) {
+                        setState(() {
+                          if (selected == true) {
+                            if (!selectedSkillIds
+                                .contains(skillId)) {
+                              selectedSkillIds.add(skillId);
+                            }
+                          } else {
+                            selectedSkillIds.remove(skillId);
+                          }
+                        });
+                      },
               );
             }),
 
             const SizedBox(height: 24),
 
-            // Creates the messestand.
             ElevatedButton(
-              onPressed: isSaving ? null : createMessestand,
+              onPressed:
+                  isSaving ? null : createMessestand,
               child: isSaving
                   ? const SizedBox(
-                      width: 20,
-                      height: 20,
+                      width: 22,
+                      height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                       ),

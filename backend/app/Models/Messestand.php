@@ -50,4 +50,11 @@ class Messestand extends Model
         return $this->hasOne(Einsatzgebiet::class);
     }
 
+
+    // have many images.
+    public function bilder()
+    {
+        return $this->hasMany(MessestandBild::class);
+    }
+
 }

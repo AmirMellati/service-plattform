@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\HealthController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MessestandController;
 use App\Models\Skill;
+use App\Http\Controllers\Api\MessestandBildController;
 
 
 
@@ -51,4 +52,10 @@ Route::put(
 Route::post(
     '/messestaende/{messestand}/featured',
     [MessestandController::class, 'activateFeatured']
+)->middleware('auth:sanctum');
+
+//router for Bild
+Route::post(
+    '/messestaende/{messestand}/bilder',
+    [MessestandBildController::class, 'store']
 )->middleware('auth:sanctum');
