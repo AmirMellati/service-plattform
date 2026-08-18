@@ -172,6 +172,10 @@ class _HomeScreenState extends State<HomeScreen> {
               itemBuilder: (context, index) {
                 final messestand = messestaende[index];
 
+                // Retrieves the first image of the messestand, if available.
+                final bilder = (messestand['bilder'] ?? []) as List<dynamic>;
+                final firstBild = bilder.isNotEmpty ? bilder[0] : null;
+                print('Bilder: $bilder');
                 return Card(
                   margin: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -182,6 +186,33 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        
+                        if (firstBild != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              'http://127.0.0.1:8000/storage/${firstBild['bild']}',
+                              width: double.infinity,
+                              height: 180,
+                              fit: BoxFit.cover,
+
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: double.infinity,
+                                  height: 180,
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 50,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+                        ],
+
                         // Displays the messestand title.
                         Text(
                           messestand['title'],
