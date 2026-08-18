@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use App\Models\Profile;
-use App\Models\Skill;
 
 class AuthController extends Controller
 {
@@ -19,13 +18,11 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
 
-            // Validates the user's required private address.
             'street' => ['required', 'string', 'max:255'],
             'house_number' => ['required', 'string', 'max:20'],
             'postal_code' => ['required', 'string', 'max:20'],
             'city' => ['required', 'string', 'max:255'],
         ]);
-
 
         $user = User::create([
             'name' => $validated['name'],
@@ -33,10 +30,9 @@ class AuthController extends Controller
             'password' => $validated['password'],
             'role' => 'USER',
             'status' => 'AKTIV',
-
+            'failed_login_attempts' => 0,
         ]);
 
-        // Creates a profile with the user's private address.
         Profile::create([
             'user_id' => $user->id,
             'street' => $validated['street'],
@@ -51,31 +47,83 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // Logs in a user by validating the email and password.
+
     public function login(Request $request): JsonResponse
     {
-        // Validate the login data sent by the client.
+        // 1. Validate input.
         $validated = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        // Find the user in the database by email address.
+        // 2. Find user by email.
         $user = User::where('email', $validated['email'])->first();
 
-        // Check if the user exists and if the entered password is correct.
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        // 3. User does not exist.
+        if (!$user) {
             return response()->json([
                 'message' => 'E-Mail oder Passwort ist falsch.',
             ], 401);
         }
 
-        // Create a Sanctum token for the authenticated user.
+        // 4. Account is already blocked.
+        if (strtoupper($user->status) === 'BLOCKED') {
+            return response()->json([
+                'message' => 'Ihr Konto ist gesperrt. Bitte kontaktieren Sie den Administrator.',
+                'blocked' => true,
+            ], 403);
+        }
+
+        // 5. Password is incorrect.
+        if (!Hash::check($validated['password'], $user->password)) {
+
+            // Increase failed login attempts.
+            $user->increment('failed_login_attempts');
+
+            // Reload fresh data from database.
+            $user->refresh();
+
+            // 6. Block account after 3 failed attempts.
+            if ($user->failed_login_attempts >= 3) {
+
+                $user->status = 'BLOCKED';
+                $user->save();
+
+                // Revoke all existing Sanctum tokens.
+                $user->tokens()->delete();
+
+                return response()->json([
+                    'message' => 'Ihr Konto wurde nach 3 fehlgeschlagenen Anmeldeversuchen gesperrt. Bitte kontaktieren Sie den Administrator.',
+                    'blocked' => true,
+                    'failed_login_attempts' => $user->failed_login_attempts,
+                    'remaining_attempts' => 0,
+                ], 403);
+            }
+
+            $remainingAttempts = 3 - $user->failed_login_attempts;
+
+            return response()->json([
+                'message' => 'E-Mail oder Passwort ist falsch.',
+                'blocked' => false,
+                'failed_login_attempts' => $user->failed_login_attempts,
+                'remaining_attempts' => $remainingAttempts,
+            ], 401);
+        }
+
+        // 7. Password is correct.
+        // Reset failed attempts after successful login.
+        if ($user->failed_login_attempts > 0) {
+            $user->failed_login_attempts = 0;
+            $user->save();
+        }
+
+        // 8. Create Sanctum token.
         $token = $user->createToken('flutter-app')->plainTextToken;
 
-        // Return the authenticated user and token to the client.
+        // 9. Login successful.
         return response()->json([
             'message' => 'Anmeldung erfolgreich.',
+            'blocked' => false,
             'user' => $user,
             'token' => $token,
         ], 200);
